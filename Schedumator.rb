@@ -16,12 +16,27 @@ end
 # Section - contains one or more blocks representing meeting times for the class section
 # 	code is the section id, e.g. ME 345A
 class Section
-	def initialize(code, blocks)
-	
+	def initialize(code, blocks, callNumber)
+		@code = code
+		@blocks = blocks
+		@callNumber = callNumber
 	end
 end
 
-# Block - Represents a range of time that is 'blocked' during a certain weekday from start HH:MM to end HH:MM - add info string to store location of meeting or other relevant info
+# Used to handle both singular day strings "M" and multiple day strings "MWF"
+# returns an array of blocks, length >= 1
+def makeBlocks(days, startTimeString, endTimeString, info)
+	blocks = []
+	days.split("").each do |d|
+		b = Block.new(d, startTimeString, endTimeString, info)
+		blocks << b
+	end
+	(blocks)
+end
+
+
+# Block - Represents a range of time that is 'blocked' during a certain weekday from start HH:MM to end HH:MM 
+#  - add info string to store location of meeting or other relevant info
 class Block
 	def initialize(day, startTimeString, endTimeString, info = "")
 		@startTime = STime.new day, startTimeString
@@ -30,9 +45,9 @@ class Block
 	end
 
 	# block compare method -- returns:
-	# 0 if self collides with otherBlock (partially or completely)
-	# 1 if self occurs before otherBlock
-	# -1 if self occurs after otherBlock
+	# :isequal if self collides with otherBlock (partially or completely)
+	# :isbefore if self occurs before otherBlock
+	# :isafter if self occurs after otherBlock
 	def compare( otherBlock )
 		s1 = self.startTime
 		e1 = self.endTime
@@ -92,33 +107,42 @@ end
 class Schedumator
 	def initialize()
 		@sections = []
+		@courses = []
 
 	end
 
 	def getClasses
 		# url = 'http://www.stevens.edu/scheduler/core/core.php?cmd=getxml&term=2013F'
 		# xml_data = Net::HTTP.get_response(URI.parse(url)).body
+
 		xml_data = File.read("2013f.xml")
 		doc = REXML::Document.new(xml_data)
-		doc.elements.each('Semester/Course') do |ele|
-			puts ele.attributes["Section"]
-			puts ele.attributes["Title"]
-			puts ele.attributes["CallNumber"]
-			# puts ele
-			puts "Meetings:"
-			ele.elements.each('Meeting') do |mtg|
-				if mtg.attributes["StartTime"] != nil and mtg.attributes["Day"].length == 1
-					startTime = STime.new mtg.attributes["Day"], mtg.attributes["StartTime"]
-					endTime = STime.new mtg.attributes["Day"], mtg.attributes["EndTime"]
-					puts startTime.readableFull
-					puts endTime.readableFull
+		doc.elements.each 'Semester/Course' do |crs|
+			section = crs.attributes["Section"]
+			sectionTitle = crs.attributes["Title"]
+			sectionCallNumber = crs.attributes["CallNumber"]
+			sectionBlocks = []
+			crs.elements.each('Meeting') do |mtg|
+				mtgDays = mtg.attributes["Day"]
+				mtgStart = mtg.attributes["StartTime"] 
+				mtgEnd = mtg.attributes["EndTime"]
+				mtgBuilding = mtg.attributes["Building"]
+				mtgRoom = mtg.attributes["Room"]
+				mtgInfo = mtgBuilding + mtgRoom 
+				if mtgStart != nil
+					sectionBlocks.concat makeBlocks(mtgDays,mtgStart,mtgEnd,mtgInfo)
+
 				end
-				puts 
-				puts mtg.attributes["Building"]
-				puts mtg.attributes["Room"]
 			end
-			puts "--"
+			puts section + " " + sectionTitle + " has " + sectionBlocks.length.to_s + " blocks."
+			s = Section.new(section, sectionBlocks, sectionCallNumber)
+			@sections << s
+
+			c = Course.new(sectionTitle, section, [s] ) # set up a course for each section, for now, mush them later
+			@courses << c
+
 		end
+
 	end
 end
 
