@@ -1,5 +1,6 @@
 require 'net/http'
 require 'rexml/document'
+require 'pp'
 
 # Course - contains one or more sections from which to choose 
 #   this is not separated out from sections in the data source and will have to be parsed manually
@@ -16,11 +17,43 @@ end
 # Section - contains one or more blocks representing meeting times for the class section
 # 	code is the section id, e.g. ME 345A
 class Section
-	def initialize(code, blocks, callNumber)
+	def initialize(code, blocks, callNumber, title)
 		@code = code
 		@blocks = blocks
 		@callNumber = callNumber
+		@title = title
 	end
+
+	attr_accessor :title
+
+	def checkWithSct(otherSct)
+		@blocks.each do |b|
+			if otherSct.checkWithBlock(b) == :conflicts
+				return :conflicts
+			end
+		end
+		:clear
+	end
+
+	def checkWithBlock(block)
+		@blocks.each do |b|
+			if b.compare(block) == :iscoincident
+				puts "conflict detected"
+				return :conflicts
+			end
+		end
+		return :clear
+	end
+
+	def readable
+		string = @code + "\n"
+		@blocks.each do |b|
+			string = string + b.readable
+			string = string + "\n"
+		end
+		string
+	end
+
 end
 
 # Used to handle both singular day strings "M" and multiple day strings "MWF"
@@ -44,28 +77,48 @@ class Block
 		@info = info
 	end
 
+	attr_accessor :startTime
+	attr_accessor :endTime
+
+	def length
+		return (@endTime.value - @startTime.value)
+	end
+
 	# block compare method -- returns:
-	# :isequal if self collides with otherBlock (partially or completely)
+	# :iscoincident if self collides with otherBlock (partially or completely)
 	# :isbefore if self occurs before otherBlock
 	# :isafter if self occurs after otherBlock
 	def compare( otherBlock )
-		s1 = self.startTime
-		e1 = self.endTime
+		s1 = @startTime
+		e1 = @endTime
 		s2 = otherBlock.startTime
 		e2 = otherBlock.endTime
 		starts12 = s1.compare(s2)
-		end1Start2 = e1.compare(s2)
-		start1end2 = s1.compare(e2)
-		ends12 = e1.compare(e2)
-		if starts12 == :isequal and ends12 == :isequal 
-			(:isequal) # complete collide 
-		elsif starts12 == :isbefore and ends12 == :isbefore and end1Start2 != :isafter
-			(:isbefore) 
-		elsif starts12 == :isafter and ends12 == :isafter and start1end2 != :isafter
-			(:isafter)
+		if starts12 == :isbefore
+			len1 = self.length
+			delta = (s2.value-s1.value)
+			if len1 > delta
+				return :iscoincident
+			end
+			return :isbefore
+		elsif starts12 == :isafter
+			len2 = otherBlock.length
+			delta = (s1.value-s2.value)
+			if len2 > delta
+				return :iscoincident
+			end
+			return :isafter
+		elsif starts12 == :iscoincident
+			# they have to collide
+			return :iscoincident
 		else
-			(:isequal) #partial collisions cover the rest of the cases
+			# invalid compare value
+
 		end
+	end
+
+	def readable 
+		(@startTime.readableDay + " " + @startTime.readableTime + " to " + @endTime.readableTime)
 	end
 end
 
@@ -93,25 +146,79 @@ class STime
 		(days[@day] + " " + printHour.to_s + ":" + @minute.to_s + printStatus)
 	end
 
+	def readableTime
+		printHour = @hour
+		printStatus = "AM"
+		if printHour > 12
+			printHour = printHour-12
+			printStatus = "PM"
+		end
+		(printHour.to_s + ":" + @minute.to_s + printStatus)
+	end
+
+	def readableDay
+		["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"][@day]
+	end
+
 	def compare(otherSTime)
 		if self.value < otherSTime.value
 			(:isbefore)
 		elsif self.value == otherSTime.value 
-			(:isequal)
+			(:iscoincident)
 		else
 			(:isafter)
 		end 
 	end
 end
 
+class Schedule
+	def initialize( sections )
+		@status = :valid
+		@sections = []
+		sections.each do |nSct| 
+			if addSection(nSct) == :conflicts
+				puts "sched invalid"
+				@status = :invalid
+			end
+		end
+	end
+
+	attr_accessor :status
+
+	def addSection( newSection )
+		# check all sections for conflicts
+		@sections.each do |sct|
+			if sct.checkWithSct(newSection) == :conflicts
+				@sections << newSection
+				return :conflicts
+			end
+		end
+		@sections << newSection
+		:clear
+	end
+
+	def readable
+		return "invalid schedule." if @status == :invalid
+		string = "Valid\n"
+		@sections.each do |s|
+			string = string + s.readable
+			string = string + "\n"
+		end
+		string
+	end
+end
+
+
 class Schedumator
 	def initialize()
-		@sections = []
-		@courses = []
+		@sections = {}
+		@courses = {}
 
 	end
 
-	def getClasses
+	attr_accessor :courses
+
+	def loadSections
 		# url = 'http://www.stevens.edu/scheduler/core/core.php?cmd=getxml&term=2013F'
 		# xml_data = Net::HTTP.get_response(URI.parse(url)).body
 
@@ -134,19 +241,53 @@ class Schedumator
 
 				end
 			end
-			puts section + " " + sectionTitle + " has " + sectionBlocks.length.to_s + " blocks."
-			s = Section.new(section, sectionBlocks, sectionCallNumber)
-			@sections << s
+			# puts section + " " + sectionTitle + " has " + sectionBlocks.length.to_s + " blocks."
+			s = Section.new(section, sectionBlocks, sectionCallNumber, sectionTitle)
+			@sections[section] = s
 
-			c = Course.new(sectionTitle, section, [s] ) # set up a course for each section, for now, mush them later
-			@courses << c
-
+			# c = Course.new(sectionTitle, section, [s] ) # set up a course for each section, for now, mush them later
+			# @courses[section] = c
 		end
+	end
 
+	def mashCourses
+		@sections.each do |code,sct|
+			if @courses[sct.title] == nil
+				@courses[sct.title] = []
+			end
+			@courses[sct.title] << code
+		end
+	end
+
+	def courseMap 
+		map = ""
+		@courses.each do |title,codes|
+			map += "#{title}\n"
+			codes.each do |code| 
+				map += "   #{code}\n"
+			end
+			map += "\n"
+		end
+		return map
+	end
+
+	# makes a schedule with an array of codes like ['ME 354A','PE 200E8']
+	def makeSchedule( codes )
+		sections = []
+		codes.each do |code|
+			sections << @sections[code]
+		end
+		(Schedule.new(sections))
 	end
 end
 
 s = Schedumator.new
-s.getClasses
+s.loadSections
+s.mashCourses
+puts s.courseMap
+schedule = s.makeSchedule ["ME 354A","ME 354A"]
+
+puts "Schedule Complete."
+puts schedule.readable
 
 puts "done"

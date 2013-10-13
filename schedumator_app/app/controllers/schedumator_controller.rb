@@ -1,0 +1,2 @@
+class SchedumatorController < ApplicationController
+end
