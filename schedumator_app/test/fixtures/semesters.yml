@@ -1,0 +1,23 @@
+# == Schema Information
+#
+# Table name: semesters
+#
+#  id         :integer         not null, primary key
+#  name       :string(255)
+#  start      :date
+#  end        :date
+#  created_at :datetime
+#  updated_at :datetime
+#
+
+# Read about fixtures at http://api.rubyonrails.org/classes/ActiveRecord/Fixtures.html
+
+one:
+  name: MyString
+  start: 2014-01-18
+  end: 2014-01-18
+
+two:
+  name: MyString
+  start: 2014-01-18
+  end: 2014-01-18

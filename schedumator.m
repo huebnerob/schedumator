@@ -160,7 +160,7 @@ function [s, valid] = sort( m )
             result = compareMeetings(s{i},s{j});
             if result == 0
                 valid = 0;
-                % more sorting should happen here but we aren't using the
+                % more sorting should happen here but we arent using the
                 % results anyway
             else if result == 1 % swap them if necessary
                 temp = s{j};

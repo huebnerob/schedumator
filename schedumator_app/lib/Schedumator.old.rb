@@ -3,7 +3,7 @@ require 'rexml/document'
 require 'pp'
 
 # Course - contains one or more sections from which to choose 
-#   this is not separated out from sections in the XML and will have to be parsed manually
+#   this is not separated out from sections in the data source and will have to be parsed manually
 #   ...if we want it
 # => code is the course id, eg. ME 345
 class Course
@@ -16,52 +16,15 @@ end
 
 # Section - contains one or more blocks representing meeting times for the class section
 # 	code is the section id, e.g. ME 345A
-#   blocks are the meeting times for the section
 class Section
 	def initialize(code, blocks, callNumber, title)
-		dcs = divideCode(code)
-		@department = dcs[0]
-		@course = dcs[1]
-		@section = dcs[2]
-		@code = "#{@department}.#{@course}.#{@section}"
+		@code = code
 		@blocks = blocks
 		@callNumber = callNumber
 		@title = title
 	end
 
 	attr_accessor :title
-	attr_accessor :code
-	attr_accessor :department
-	attr_accessor :course
-	attr_accessor :section
-
-	# uses regex to find the course code and section shortcode from a full section code
-	#   E 344A  --> department E course 344 section A
-	#   E 421X2 --> department E course 421 section X2
-	def divideCode longCode
-		# regex to find n characters, a space, then n numbers
-		# the rest is the section code
-		# "hello".rpartition(/.l/)        #=> ["he", "ll", "o"]
-
-		# this regex searches for three numbers sandwiched between letters
-		regex = /(?<=[A-Z]) ?[0-9]{3}(?=[A-Z])/
-		# strip whitespace and search
-		results = longCode.gsub(/\s+/, "").rpartition(regex);
-
-		# puts "#{results[0]}|#{results[1]}|#{results[2]}"
-
-		if results[0].length > 0 and results[1].length > 0 and results[2].length > 0
-			# valid results
-			departmentCode = results[0]
-			courseCode = results[1]
-			sectionShortcode = results[2]
-			return [departmentCode, courseCode, sectionShortcode]
-		else 
-			# invalid results
-			return []
-		end
-	end
-
 
 	def checkWithSct(otherSct)
 		@blocks.each do |b|
@@ -83,10 +46,10 @@ class Section
 	end
 
 	def readable
-		string = @code + "\n"
+		string = @code + "<br>"
 		@blocks.each do |b|
 			string = string + b.readable
-			string = string + "\n"
+			string = string + "<br>"
 		end
 		string
 	end
@@ -214,6 +177,7 @@ class Schedule
 		@sections = []
 		sections.each do |nSct| 
 			if addSection(nSct) == :conflicts
+				puts "sched invalid"
 				@status = :invalid
 			end
 		end
@@ -274,84 +238,59 @@ class Schedumator
 				mtgInfo = mtgBuilding + mtgRoom 
 				if mtgStart != nil
 					sectionBlocks.concat makeBlocks(mtgDays,mtgStart,mtgEnd,mtgInfo)
+
 				end
 			end
-
 			# puts section + " " + sectionTitle + " has " + sectionBlocks.length.to_s + " blocks."
 			s = Section.new(section, sectionBlocks, sectionCallNumber, sectionTitle)
-			# @sections[s.code] = s
-			courseCode = "#{s.department}#{s.course}"
-			if @courses[courseCode] == nil
-				@courses[courseCode] = []
-			end
-			if @courses[courseCode][s.section.length-1] == nil
-				@courses[courseCode][s.section.length-1] = []
-			end
-			@courses[courseCode][s.section.length-1] << s
+			@sections[section] = s
+
+			# c = Course.new(sectionTitle, section, [s] ) # set up a course for each section, for now, mush them later
+			# @courses[section] = c
 		end
 	end
-	
-	def courseMap 
-		map = ""
-		@courses.each do |code,sectionBundles|
-			map += "#{code}\n"
-			sectionBundles.each do |sections| 
-				map += "\n"
-				if sections != nil
-					sections.each do |section|
-						map += "   #{section.code}\n"
-					end
-				end
+
+	def mashCourses
+		@sections.each do |code,sct|
+			if @courses[sct.title] == nil
+				@courses[sct.title] = []
 			end
-			map += "\n"
+			@courses[sct.title] << code
+		end
+	end
+
+	def courseMap search
+		map = ""
+		search = "" if search == nil
+		@courses.each do |title,codes|
+			next if title == nil
+			next if !title.include? search
+			map += "<h3>#{title}</h3>"
+			codes.each do |code| 
+				map += "<li>#{code}</li>"
+			end
+			map += "\n<br>"
 		end
 		return map
 	end
 
-	# makes a schedule with an array of sections
-	def makeScheduleWithSections(sections)
-		newSchedule = Schedule.new(sections)
-		# check if valid?
-		return newSchedule
-	end
-
-	def generateSchedules(courseCodes)
-		# get sections for each course code
-		# permutate all possible section possiblities 
-		allSectionCombos = [[]]
-		tempCombos = []
-		courseCodes.each do |courseCode|
-			courseSectionBundles = @courses[courseCode]
-			courseSectionBundles.each do |courseSections|
-				courseSections.each do |section|
-					allSectionCombos.each do |combo|
-						newCombo = Array.new(combo)
-						newCombo << section
-						tempCombos << newCombo
-					end
-				end
-				allSectionCombos = tempCombos
-				tempCombos = []
-			end
+	# makes a schedule with an array of codes like ['ME 354A','PE 200E8']
+	def makeSchedule( codes )
+		sections = []
+		codes.each do |code|
+			sections << @sections[code]
 		end
-		return allSectionCombos
+		(Schedule.new(sections))
 	end
 end
 
-s = Schedumator.new
-s.loadSections
-puts s.courseMap
+# s = Schedumator.new
+# s.loadSections
+# s.mashCourses
+# puts s.courseMap
+# schedule = s.makeSchedule ["ME 354A","ME 354A"]
 
-schedule = s.generateSchedules ['ME354','ME358','ME342']
+# puts "Schedule Complete."
+# puts schedule.readable
 
-puts "Schedule Complete."
-
-schedule.each do |sections|
-	puts "new schedule"
-	sections.each do |section|
-		puts section.readable
-	end
-	puts "----------------"
-end
-
-puts "done"
+# puts "done"

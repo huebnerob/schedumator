@@ -32,6 +32,9 @@ group :doc do
   gem 'sdoc', require: false
 end
 
+# annotates Models, added by rob 1/18/14
+gem 'annotate', '~> 2.4.1.beta'
+
 # Use ActiveModel has_secure_password
 # gem 'bcrypt-ruby', '~> 3.0.0'
 

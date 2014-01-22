@@ -4,7 +4,7 @@ require 'pp'
 
 # Course - contains one or more sections from which to choose 
 #   this is not separated out from sections in the XML and will have to be parsed manually
-#   ...if we want it
+#   ...if we want it (we do)
 # => code is the course id, eg. ME 345
 class Course
 	def initialize(code, name, sections)
@@ -83,10 +83,10 @@ class Section
 	end
 
 	def readable
-		string = @code + "\n"
+		string = @code + "<br>"
 		@blocks.each do |b|
 			string = string + b.readable
-			string = string + "\n"
+			string = string + "<br>"
 		end
 		string
 	end
@@ -235,10 +235,10 @@ class Schedule
 
 	def readable
 		return "invalid schedule." if @status == :invalid
-		string = "Valid\n"
+		string = "Valid<br>"
 		@sections.each do |s|
 			string = string + s.readable
-			string = string + "\n"
+			string = string + "<br>"
 		end
 		string
 	end
@@ -294,16 +294,16 @@ class Schedumator
 	def courseMap 
 		map = ""
 		@courses.each do |code,sectionBundles|
-			map += "#{code}\n"
+			map += "<h3>#{code}</h3>"
 			sectionBundles.each do |sections| 
-				map += "\n"
+				map += "<br>"
 				if sections != nil
 					sections.each do |section|
-						map += "   #{section.code}\n"
+						map += "   <li>#{section.code}</li>"
 					end
 				end
 			end
-			map += "\n"
+			map += "<br>"
 		end
 		return map
 	end
@@ -334,24 +334,33 @@ class Schedumator
 				tempCombos = []
 			end
 		end
-		return allSectionCombos
+		schedules = []
+		allSectionCombos.each do |combo|
+			newSchedule = Schedule.new(combo)
+			if newSchedule.status == :valid
+				schedules << newSchedule
+			else 
+				# schedules << newSchedule # show all schedules
+			end
+		end
+		return schedules
 	end
 end
 
-s = Schedumator.new
-s.loadSections
-puts s.courseMap
+# s = Schedumator.new
+# s.loadSections
+# puts s.courseMap
 
-schedule = s.generateSchedules ['ME354','ME358','ME342']
+# schedule = s.generateSchedules ['ME354','ME358','ME342']
 
-puts "Schedule Complete."
+# puts "Schedule Complete."
 
-schedule.each do |sections|
-	puts "new schedule"
-	sections.each do |section|
-		puts section.readable
-	end
-	puts "----------------"
-end
+# schedule.each do |sections|
+# 	puts "new schedule"
+# 	sections.each do |section|
+# 		puts section.readable
+# 	end
+# 	puts "----------------"
+# end
 
-puts "done"
+# puts "done"

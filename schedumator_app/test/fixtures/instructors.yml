@@ -1,14 +1,11 @@
 # == Schema Information
 #
-# Table name: courses
+# Table name: instructors
 #
-#  id            :integer         not null, primary key
-#  department_id :integer
-#  semester_id   :integer
-#  code          :string(255)
-#  title         :string(255)
-#  created_at    :datetime
-#  updated_at    :datetime
+#  id         :integer         not null, primary key
+#  name       :string(255)
+#  created_at :datetime
+#  updated_at :datetime
 #
 
 # Read about fixtures at http://api.rubyonrails.org/classes/ActiveRecord/Fixtures.html

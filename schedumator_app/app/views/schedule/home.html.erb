@@ -1,2 +1,11 @@
-<h1>Schedule#home</h1>
-<p>Find me in app/views/schedule/home.html.erb</p>
+<h1>Schedule</h1>
+
+<%= form_tag :action => 'sign_in' do %>
+	<p> Search class titles:
+	<%= text_field_tag 'visitor_name', @name %> </p>
+
+	<%= submit_tag 'Go' %>
+
+<% end %>
+
+<p> <%= @courseMap.html_safe %> </p>
