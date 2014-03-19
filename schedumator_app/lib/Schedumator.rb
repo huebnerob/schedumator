@@ -6,7 +6,7 @@ require 'pp'
 #   this is not separated out from sections in the XML and will have to be parsed manually
 #   ...if we want it (we do)
 # => code is the course id, eg. ME 345
-class Course
+class SCHCourse
 	def initialize(code, name, sections)
 		@name = name
 		@code = code
@@ -17,7 +17,7 @@ end
 # Section - contains one or more blocks representing meeting times for the class section
 # 	code is the section id, e.g. ME 345A
 #   blocks are the meeting times for the section
-class Section
+class SCHSection
 	def initialize(code, blocks, callNumber, title)
 		dcs = divideCode(code)
 		@department = dcs[0]
@@ -98,7 +98,7 @@ end
 def makeBlocks(days, startTimeString, endTimeString, info)
 	blocks = []
 	days.split("").each do |d|
-		b = Block.new(d, startTimeString, endTimeString, info)
+		b = SCHBlock.new(d, startTimeString, endTimeString, info)
 		blocks << b
 	end
 	(blocks)
@@ -107,7 +107,7 @@ end
 
 # Block - Represents a range of time that is 'blocked' during a certain weekday from start HH:MM to end HH:MM 
 #  - add info string to store location of meeting or other relevant info
-class Block
+class SCHBlock
 	def initialize(day, startTimeString, endTimeString, info = "")
 		@startTime = STime.new day, startTimeString
 		@endTime = STime.new day, endTimeString
@@ -208,7 +208,7 @@ class STime
 	end
 end
 
-class Schedule
+class SCHSchedule
 	def initialize( sections )
 		@status = :valid
 		@sections = []
@@ -278,7 +278,7 @@ class Schedumator
 			end
 
 			# puts section + " " + sectionTitle + " has " + sectionBlocks.length.to_s + " blocks."
-			s = Section.new(section, sectionBlocks, sectionCallNumber, sectionTitle)
+			s = SCHSection.new(section, sectionBlocks, sectionCallNumber, sectionTitle)
 			# @sections[s.code] = s
 			courseCode = "#{s.department}#{s.course}"
 			if @courses[courseCode] == nil
@@ -310,7 +310,7 @@ class Schedumator
 
 	# makes a schedule with an array of sections
 	def makeScheduleWithSections(sections)
-		newSchedule = Schedule.new(sections)
+		newSchedule = SCHSchedule.new(sections)
 		# check if valid?
 		return newSchedule
 	end
@@ -322,7 +322,15 @@ class Schedumator
 		tempCombos = []
 		courseCodes.each do |courseCode|
 			courseSectionBundles = @courses[courseCode]
+			if courseSectionBundles == nil 
+				puts "invalid course code"
+				next
+			end
 			courseSectionBundles.each do |courseSections|
+				if courseSections == nil 
+					puts "invalid course sections"
+					next
+				end
 				courseSections.each do |section|
 					allSectionCombos.each do |combo|
 						newCombo = Array.new(combo)
@@ -336,7 +344,7 @@ class Schedumator
 		end
 		schedules = []
 		allSectionCombos.each do |combo|
-			newSchedule = Schedule.new(combo)
+			newSchedule = SCHSchedule.new(combo)
 			if newSchedule.status == :valid
 				schedules << newSchedule
 			else 

@@ -10,9 +10,8 @@ class DataLoader
 		DataLoader.generateSections
 	end
 
-
 	def self.allSupportedTerms
-		return ['2014S']
+		return ['2014S', '2013F']
 	end
 
 	def self.latestTerm
@@ -29,42 +28,71 @@ class DataLoader
 	end
 
 	def self.loadLocalXML #stores a cached XML on our server in case stevens is offline/malformed
-		xml_data = File.read("2013f.xml")
+		xml_data = File.read("2014s.xml")
 		@doc = REXML::Document.new(xml_data)
 	end
 
+	# uses regex to find the course code and section shortcode from a full section code
+	#   E 344A  --> department E course 344 section A
+	#   E 421X2 --> department E course 421 section X2
+	def self.divideCode longCode
+		# regex to find n characters, a space, then n numbers
+		# the rest is the section code
+		# "hello".rpartition(/.l/)        #=> ["he", "ll", "o"]
+
+		# this regex searches for three numbers sandwiched between letters
+		regex = /(?<=[A-Z]) ?[0-9]{3}(?=[A-Z])/
+		# strip whitespace and search
+		results = longCode.gsub(/\s+/, "").rpartition(regex);
+
+		# puts "#{results[0]}|#{results[1]}|#{results[2]}"
+
+		if results[0].length > 0 and results[1].length > 0 and results[2].length > 0
+			# valid results
+			departmentCode = results[0]
+			courseCode = results[1]
+			sectionShortcode = results[2]
+			return [departmentCode, courseCode, sectionShortcode]
+		else 
+			# invalid results
+			return []
+		end
+	end
+
 	def self.generateSections
+		courses = {}
 		@doc.elements.each 'Semester/Course' do |crs|
 			section = crs.attributes["Section"]
+			codes = DataLoader.divideCode(section)
+
+			courseCode = codes[0]+codes[1]
+			sectionCode = codes[2]
+
+			course = courses[courseCode]
+			if (course == nil) 
+				course = Course.new
+				course.code = courseCode
+				courses[courseCode] = course
+			end
+
 			sectionTitle = crs.attributes["Title"]
-			# sectionCallNumber = crs.attributes["CallNumber"]
+			sectionCallNumber = crs.attributes["CallNumber"]
 			sectionMeetings = []
 			crs.elements.each('Meeting') do |mtg|
 				mtgDays = mtg.attributes["Day"]
 				mtgStart = mtg.attributes["StartTime"] 
 				mtgEnd = mtg.attributes["EndTime"]
-				# mtgBuilding = mtg.attributes["Building"]
-				# mtgRoom = mtg.attributes["Room"]
-				# mtgInfo = mtgBuilding + mtgRoom 
 				if mtgStart != nil
 					sectionMeetings << [mtgDays, mtgStart, mtgEnd]
 				end
 			end
 
-			# puts section + " " + sectionTitle + " has " + sectionBlocks.length.to_s + " blocks."
 			s = Section.generate sectionMeetings
-			s.code = section
+			s.code = sectionCode
 			s.save
 
-			# @sections[s.code] = s
-			# courseCode = "#{s.department}#{s.course}"
-			# if @courses[courseCode] == nil
-			# 	@courses[courseCode] = []
-			# end
-			# if @courses[courseCode][s.section.length-1] == nil
-			# 	@courses[courseCode][s.section.length-1] = []
-			# end
-			# @courses[courseCode][s.section.length-1] << s
+			course.sections << s
+			course.save
 		end
 	end
 end

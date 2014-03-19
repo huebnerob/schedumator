@@ -1,11 +1,30 @@
-<h1>Schedule</h1>
+<head>
+<style>
+.lolimg {
+	float:right;
+	margin: 16pt;
+}
+</style>
+</head>
+
+<body>
+
+<div class="lolimg"><img src="http://i.imgur.com/rd6cn2n.gif" height=100\> <img src="http://i.imgur.com/vq4NCR3.png" height=100\></div>
+
+<h1>Schedule Automator v.0.01</h1>
+<h4>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;WOW&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;SUCH BETA&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;VERY 404</h4>
+
 
 <%= form_tag :action => 'sign_in' do %>
-	<p> Search class titles:
-	<%= text_field_tag 'visitor_name', @name %> </p>
+	<h4> Enter a comma-separated list of course codes:
+	<%= text_field_tag 'visitor_name', @name %> </h4>
+	<p> Example: ME345,E344,PE200 </p>
 
 	<%= submit_tag 'Go' %>
 
 <% end %>
 
 <p> <%= @courseMap.html_safe %> </p>
+
+
+</body>

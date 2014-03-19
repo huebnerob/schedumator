@@ -31,4 +31,37 @@ class Section < ActiveRecord::Base
 		newSection.save
 		return newSection
 	end
+
+	def checkWithSct(otherSct)
+		self.meetings.each do |m|
+			if otherSct.checkWithBlock(m) == :conflicts
+				return :conflicts
+			end
+		end
+		:clear
+	end
+
+	def checkWithBlock(meeting)
+		self.meetings.each do |m|
+			if m.compare(meeting) == :iscoincident
+				# puts "conflict detected"
+				return :conflicts
+			end
+		end
+		return :clear
+	end
+
+	def readable
+		string = self.course.code + self.code + "\n"
+		self.meetings.each do |m|
+			string = string + m.readable
+			string = string + "\n"
+		end
+		return string
+	end
+
+	def fullcode 
+		return self.course.code + "" + self.code
+	end
+
 end

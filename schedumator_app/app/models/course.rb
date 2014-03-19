@@ -12,10 +12,19 @@
 #
 
 class Course < ActiveRecord::Base
-	belongs_to :department
-	belongs_to :semester
+	# belongs_to :department
+	# belongs_to :semester
 
 	has_many :sections
 
-	
+	def binSections 
+		sectionsBinned = [];
+		sections.each do |section|
+			if sectionsBinned[section.code.length-1] == nil
+				sectionsBinned[section.code.length-1] = []
+			end
+			sectionsBinned[section.code.length-1] << section
+		end
+		return sectionsBinned
+	end
 end

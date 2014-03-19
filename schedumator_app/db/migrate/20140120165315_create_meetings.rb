@@ -5,9 +5,9 @@ class CreateMeetings < ActiveRecord::Migration
       t.integer :startTime
       t.integer :endTime
 
-      t.string :activity
+      # t.string :activity
 
-      t.string :room_id
+      # t.string :room_id
 
       t.belongs_to :section
 

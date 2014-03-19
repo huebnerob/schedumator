@@ -13,6 +13,9 @@
 
 ActiveRecord::Schema.define(version: 20140120165328) do
 
+  # These are extensions that must be enabled in order to support this database
+  enable_extension "plpgsql"
+
   create_table "buildings", force: true do |t|
     t.string   "name"
     t.datetime "created_at"
@@ -26,8 +29,7 @@ ActiveRecord::Schema.define(version: 20140120165328) do
   end
 
   create_table "courses", force: true do |t|
-    t.integer  "department_id"
-    t.integer  "semester_id"
+    t.string   "departmentString"
     t.string   "code"
     t.string   "title"
     t.datetime "created_at"
@@ -50,8 +52,6 @@ ActiveRecord::Schema.define(version: 20140120165328) do
   create_table "meetings", force: true do |t|
     t.integer  "startTime"
     t.integer  "endTime"
-    t.string   "activity"
-    t.string   "room_id"
     t.integer  "section_id"
     t.datetime "created_at"
     t.datetime "updated_at"
@@ -70,12 +70,8 @@ ActiveRecord::Schema.define(version: 20140120165328) do
   create_table "sections", force: true do |t|
     t.string   "code"
     t.string   "courseCode"
+    t.string   "departmentCode"
     t.string   "callNumber"
-    t.integer  "credits"
-    t.string   "instructorCode"
-    t.string   "status"
-    t.integer  "currentEnroll"
-    t.integer  "maxEnroll"
     t.integer  "course_id"
     t.datetime "created_at"
     t.datetime "updated_at"
